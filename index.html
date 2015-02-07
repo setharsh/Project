@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8">
+  	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+  	<link rel="stylesheet" href="css/query-builder.css">
+  	<link rel="stylesheet" href="css/bootstrap.min.css">
+  	<link rel="stylesheet" href="plugins/bt-tooltip-errors/plugin.css">
+  	<link rel="stylesheet" href="plugins/sortable/plugin.css">
+  	<link rel="stylesheet" href="plugins/filter-description/plugin.css">
+  	<style>
+    body {
+        padding-top: 70px;
+    }
+    </style>
+
+<script src="js/jquery.1.11.2.min.js"></script>
+<script src="js/microevent.min.js"></script>
+<script src="js/jQuery.extendext.min.js"></script>
+<script src="js/bootstrap.min.js"></script>
+<script src="js/query-builder.js"></script>
+<script src="plugins/sql.js"></script>
+<script src="plugins/bt-tooltip-errors/plugin.js"></script>
+<script src="plugins/sortable/plugin.js"></script>
+<script src="plugins/filter-description/plugin.js"></script>
+<script src="plugins/bootbox.min.js"></script>
+</head>
+
+<body>
+
+ 	<!-- Navigation -->
+    <nav class="navbar navbar-inverse navbar-fixed-top" role="navigation">
+        <div class="container">
+            <div class="navbar-header">
+                <button type="button" class="navbar-toggle" data-toggle="collapse" data-target="#bs-example-navbar-collapse-1">
+                    <span class="sr-only">Toggle navigation</span>
+                    <span class="icon-bar"></span>
+                    <span class="icon-bar"></span>
+                    <span class="icon-bar"></span>
+                </button>
+                <a class="navbar-brand" href="#">Demo</a>
+            </div>
+            <div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">
+                <ul class="nav navbar-nav">
+                    <li>
+                        <a href="#">Query Builder</a>
+                    </li>
+                    <li>
+                        <a href="questions.html">Questions List</a>
+                    </li>
+                </ul>
+            </div>			<!-- /.navbar-collapse -->
+	    </div>		<!-- /.container -->
+    </nav>
+
+
+	<!-- Page Content -->
+	<div class="container">
+		<div class="row">
+			  <div class="col-md-12 col-lg-10 col-lg-offset-1">
+			    
+			    <div id="builder"></div>
+			    
+			    <div class="btn-group">
+			      <button class="btn btn-warning reset">Reset</button>
+			      <button class="btn btn-success set">Set rules</button>
+			    </div>
+			    
+			    <div class="btn-group">
+			      <button class="btn btn-primary parse-json">JSON</button>
+			      <button class="btn btn-primary parse-sql" data-stmt="false">SQL</button>
+			    </div>
+
+			    <div id="result" class="hide">
+			      <h3>Output</h3>
+			      <pre></pre>
+			    </div>
+			  </div>
+		  </div>		<!-- /.row -->
+	</div>
+
+	<script>
+		$('#builder').queryBuilder({
+  allow_empty: true,
+  
+  onValidationError: function($target, err) {
+      console.error(err, $target);
+  },
+  
+  plugins: {
+    'bt-tooltip-errors': { delay: 100},
+    'sortable': null,
+    'filter-description': { mode: 'bootbox' }
+  },
+  
+  filters: [
+  //basic
+  {
+    id: 'name',
+    label: 'Name',
+    type: 'string',
+    optgroup: 'core',
+    default_value: 'Blah Blah',
+    size: 30
+  },
+  //textarea
+  {
+    id: 'bson',
+    label: 'Label',
+    type: 'string',
+    input: 'textarea',
+    operators: ['equal'],
+    size: 30,
+    rows: 3
+  },
+   //select
+  {
+    id: 'category',
+    label: 'Category',
+    type: 'integer',
+    input: 'checkbox',
+    optgroup: 'core',
+    values: {
+      1: 'Cat 1',
+      2: 'Cat 2'
+    },
+    operators: ['in', 'not_in', 'equal', 'not_equal', 'is_null', 'is_not_null']
+  },
+  //radio
+  {
+    id: 'in_stock',
+    label: 'In stock',
+    type: 'integer',
+    input: 'radio',
+    optgroup: 'plugin',
+    values: {
+      1: 'Yes',
+      0: 'No'
+    },
+    operators: ['equal']
+  },
+  //double
+  {
+    id: 'price',
+    label: 'Price',
+    type: 'double',
+    size: 5,
+    validation: {
+      min: 0,
+      step: 0.01
+    }
+  }, 
+   // placeholder and regex validation
+  {
+    id: 'id',
+    label: 'Identifier',
+    type: 'string',
+    optgroup: 'plugin',
+    placeholder: '____-____-____',
+    size: 14,
+    operators: ['equal', 'not_equal'],
+    validation: {
+      format: /^.{4}-.{4}-.{4}$/
+    }
+  },
+  //custom input
+  {
+    id: 'coord',
+    label: 'Coordinates',
+    type: 'string',
+    default_value: 'C.5',
+    description: '<p>The letter is the cadran identifier:</p>\
+<ul>\
+  <li><b>A</b>: alpha</li>\
+  <li><b>B</b>: beta</li>\
+  <li><b>C</b>: gamma</li>\
+</ul>',
+    validation: {
+      format: /^[A-C]{1}.[1-6]{1}$/
+    },
+    input: function($rule, filter) {
+      var $container = $rule.find('.rule-value-container');
+      
+      $container.on('change', '[name=coord_1]', function(){
+        var h = '';
+        
+        switch ($(this).val()) {
+          case 'A':
+            h = '<option value="-1">-</option> <option value="1">1</option> <option value="2">2</option>';
+            break;
+          case 'B':
+            h = '<option value="-1">-</option> <option value="3">3</option> <option value="4">4</option>';
+            break;
+          case 'C':
+            h = '<option value="-1">-</option> <option value="5">5</option> <option value="6">6</option>';
+            break;
+        }
+        
+        $container.find('[name=coord_2]').html(h).toggle(h!='');
+      });
+      
+      return '\
+      <select name="coord_1"> \
+        <option value="-1">-</option> \
+        <option value="A">A</option> \
+        <option value="B">B</option> \
+        <option value="C">C</option> \
+      </select> \
+      <select name="coord_2" style="display:none;"></select>';
+    },
+    valueParser: function($rule, value, filter, operator) {
+      return $rule.find('[name=coord_1]').val()
+        +'.'+$rule.find('[name=coord_2]').val();
+    },
+    onAfterSetValue: function($rule, value, filter, operator) {
+      if (operator.accept_values) {
+        var val = value[0].split('.');
+        
+        $rule.find('[name=coord_1]').val(val[0]).trigger('change');
+        $rule.find('[name=coord_2]').val(val[1]);
+      }
+    }
+  }]
+});
+
+// set rules
+$('.set').on('click', function() {
+  $('#builder').queryBuilder('setRules', {
+    condition: 'AND',
+    rules: [{
+      id: 'price',
+      operator: 'between',
+      value: [10.25, 15.52],
+      flags: {
+        no_delete: true,
+        filter_readonly: true
+      }
+    }, {
+      condition: 'OR',
+      rules: [{
+        id: 'category',
+        operator: 'equal',
+        value: 2
+      }, {
+        id: 'coord',
+        operator: 'equal',
+        value: 'B.3'
+      }]
+    }]
+  });
+
+  $('.parse-json').trigger('click');
+})
+
+
+// reset builder
+$('.reset').on('click', function() {
+  $('#builder').queryBuilder('reset');
+  $('#result').addClass('hide').find('pre').empty();
+});
+
+// get rules
+$('.parse-json').on('click', function() {
+  $('#result').removeClass('hide')
+    .find('pre').html(JSON.stringify(
+      $('#builder').queryBuilder('getRules'),
+      undefined, 2
+    ));
+});
+
+$('.parse-sql').on('click', function() {
+  var res = $('#builder').queryBuilder('getSQL', $(this).data('stmt'), false);
+  $('#result').removeClass('hide')
+    .find('pre').html(
+      res.sql + (res.params ? '\n\n' + JSON.stringify(res.params, undefined, 2) : '')
+    );
+});
+
+$('.parse-mongo').on('click', function() {
+  $('#result').removeClass('hide')
+    .find('pre').html(JSON.stringify(
+      $('#builder').queryBuilder('getMongo'),
+      undefined, 2
+    ));
+});
+	</script>
+
+</body>
+</html>
